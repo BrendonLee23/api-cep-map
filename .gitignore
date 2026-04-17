@@ -1,0 +1,9 @@
+node_modules/
+dist/
+logs/
+data/ceps/
+data/ceps.csv
+data/*.md
+scripts/
+*.zip
+*.log
