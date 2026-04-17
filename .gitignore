@@ -6,4 +6,5 @@ data/ceps.csv
 data/*.md
 scripts/
 *.zip
+!data/ceps.zip
 *.log
