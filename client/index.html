@@ -1,58 +1,260 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="h-full dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>api-cep-map</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
-    form { display: flex; flex-direction: column; gap: .6rem; max-width: 340px; }
-    label { display: flex; flex-direction: column; gap: .2rem; font-size: .9rem; }
-    input { padding: .4rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: .5rem 1.2rem; font-size: 1rem; cursor: pointer; align-self: flex-start; }
-    #resultado { margin-top: 1.5rem; }
-    ul { columns: 3; column-gap: 1rem; list-style: disc; padding-left: 1.2rem; }
-    .erro { color: #c00; }
-    .info { color: #444; font-size: .9rem; }
+    .scrollbar-custom::-webkit-scrollbar { width: 6px; }
+    .scrollbar-custom::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-custom::-webkit-scrollbar-thumb { background-color: #6366f1; border-radius: 99px; }
+    .scrollbar-custom::-webkit-scrollbar-thumb:hover { background-color: #818cf8; }
+    .dark .scrollbar-custom::-webkit-scrollbar-thumb { background-color: #4f46e5; }
+    .dark .scrollbar-custom::-webkit-scrollbar-thumb:hover { background-color: #6366f1; }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-enter {
+      animation: fadeSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .animate-enter-delay-1 { animation-delay: 0.05s; }
+    .animate-enter-delay-2 { animation-delay: 0.13s; }
+    .animate-enter-delay-3 { animation-delay: 0.21s; }
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+      border-radius: 0.5rem;
+    }
+    .dark .skeleton {
+      background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: #1e293b;
+      -webkit-box-shadow: 0 0 0px 1000px #f1f5f9 inset;
+      transition: background-color 5000s ease-in-out 0s;
+    }
+    .dark input:-webkit-autofill,
+    .dark input:-webkit-autofill:hover,
+    .dark input:-webkit-autofill:focus {
+      -webkit-text-fill-color: #f1f5f9;
+      -webkit-box-shadow: 0 0 0px 1000px #0f172a inset;
+      transition: background-color 5000s ease-in-out 0s;
+    }
   </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: { colors: { brand: '#6366f1' } } }
+    }
+  </script>
 </head>
-<body>
-  <h1>Busca de CEPs por Raio</h1>
-  <form id="formulario">
-    <label>
-      CEP de origem
-      <input type="text" id="cep" maxlength="9" placeholder="00000-000" required>
-    </label>
-    <label>
-      Raio (km)
-      <input type="number" id="raioKm" min="0.1" max="500" step="any" value="5" required>
-    </label>
-    <button type="submit">Buscar</button>
-  </form>
-  <div id="resultado"></div>
+<body class="h-screen overflow-hidden bg-gradient-to-br from-slate-100 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-slate-800 dark:text-slate-100 antialiased transition-colors duration-300">
+
+  <div class="max-w-3xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-8 h-full flex flex-col">
+
+    <!-- Toggle tema -->
+    <div class="flex justify-end mb-4 shrink-0 animate-enter">
+      <button id="btnTema" class="flex items-center gap-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs font-semibold px-4 py-2 rounded-xl transition-all duration-300">
+        <svg id="iconSol" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m8.66-9h-1M4.34 12h-1m15.07-6.07-.71.71M6.34 17.66l-.71.71m12.73 0-.71-.71M6.34 6.34l-.71-.71M12 7a5 5 0 1 0 0 10A5 5 0 0 0 12 7Z"/>
+        </svg>
+        <svg id="iconLua" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75 9.75 9.75 0 0 1 8.25 6c0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 12c0 5.385 4.365 9.75 9.75 9.75 4.113 0 7.64-2.536 9.002-6.248Z"/>
+        </svg>
+
+      </button>
+    </div>
+
+    <!-- Header -->
+    <div class="text-center mb-4 sm:mb-6 shrink-0 animate-enter animate-enter-delay-1">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 mb-4">
+        <svg class="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 transition-colors duration-300">Busca de CEPs por Raio</h1>
+      <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm transition-colors duration-300">Informe um CEP de origem e o raio em quilômetros</p>
+    </div>
+
+    <!-- Form card -->
+    <div class="bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-6 backdrop-blur-sm mb-4 shrink-0 transition-colors duration-300 animate-enter animate-enter-delay-2">
+      <form id="formulario" class="flex flex-col sm:flex-row gap-4 items-end">
+        <div class="flex-1">
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 transition-colors duration-300">CEP de origem</label>
+          <input
+            type="text" id="cep" maxlength="9" placeholder="00000-000" required
+            class="w-full bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
+          >
+        </div>
+        <div class="w-full sm:w-36">
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 transition-colors duration-300">Raio (km)</label>
+          <input
+            type="number" id="raioKm" min="0.1" max="500" step="any" value="5" required
+            class="w-full bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-600 rounded-xl px-4 py-2.5 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
+          >
+        </div>
+        <button
+          type="submit" id="btnBuscar"
+          class="flex items-center justify-center gap-2 w-full sm:w-auto bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          <span id="btnTexto">Buscar</span>
+          <svg id="spinner" class="hidden animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+        </button>
+        <button
+          type="button" id="btnLimpar"
+          class="hidden items-center justify-center w-full sm:w-auto bg-slate-200 dark:bg-slate-700 hover:bg-red-500/10 dark:hover:bg-red-500/15 hover:border-red-500/40 border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 px-3 py-2.5 rounded-xl transition-all duration-200"
+          title="Limpar busca"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- Resultado -->
+    <div id="resultado" class="flex-1 overflow-hidden flex flex-col min-h-0 animate-enter animate-enter-delay-3"></div>
+
+  </div>
 
   <script>
-    document.getElementById('formulario').addEventListener('submit', async function(e) {
+    document.getElementById('btnTema').addEventListener('click', function () {
+      document.documentElement.classList.toggle('dark');
+    });
+
+    const btnLimpar = document.getElementById('btnLimpar');
+    btnLimpar.addEventListener('click', function () {
+      document.getElementById('cep').value = '';
+      document.getElementById('raioKm').value = '5';
+      document.getElementById('resultado').innerHTML = '';
+      btnLimpar.classList.remove('flex');
+      btnLimpar.classList.add('hidden');
+    });
+
+    const cepInput = document.getElementById('cep');
+    cepInput.addEventListener('input', function () {
+      let v = this.value.replace(/\D/g, '').slice(0, 8);
+      this.value = v.length > 5 ? v.slice(0,5) + '-' + v.slice(5) : v;
+    });
+
+    document.getElementById('formulario').addEventListener('submit', async function (e) {
       e.preventDefault();
-      var cep = document.getElementById('cep').value.replace(/\D/g, '');
-      var raioKm = document.getElementById('raioKm').value;
-      var el = document.getElementById('resultado');
-      el.innerHTML = '<p class="info">Buscando...</p>';
+      const cep = cepInput.value.replace(/\D/g, '');
+      const raioKm = document.getElementById('raioKm').value;
+      const el = document.getElementById('resultado');
+      const btn = document.getElementById('btnBuscar');
+      const spinner = document.getElementById('spinner');
+      const btnTexto = document.getElementById('btnTexto');
+
+      btn.disabled = true;
+      spinner.classList.remove('hidden');
+      btnTexto.textContent = 'Buscando...';
+
+      el.innerHTML = `
+        <div class="bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 backdrop-blur-sm mb-3 shrink-0">
+          <div class="flex items-start gap-3">
+            <div class="skeleton w-9 h-9 rounded-xl shrink-0"></div>
+            <div class="flex-1 min-w-0 space-y-2 pt-1">
+              <div class="skeleton h-2.5 w-24 rounded"></div>
+              <div class="skeleton h-4 w-32 rounded"></div>
+              <div class="skeleton h-3 w-48 rounded"></div>
+            </div>
+            <div class="text-right shrink-0 space-y-2 pt-1">
+              <div class="skeleton h-2.5 w-20 rounded ml-auto"></div>
+              <div class="skeleton h-7 w-14 rounded ml-auto"></div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 backdrop-blur-sm flex-1 overflow-hidden flex flex-col min-h-0">
+          <div class="skeleton h-2.5 w-36 rounded mb-4"></div>
+          <div class="flex flex-wrap gap-2">
+            ${Array.from({length: 32}, (_, i) =>
+              `<div class="skeleton rounded-lg" style="width:${68 + (i % 5) * 10}px;height:30px"></div>`
+            ).join('')}
+          </div>
+        </div>
+      `;
+
+      const [res] = await Promise.all([
+        fetch('/cep/buscar?cep=' + cep + '&raioKm=' + raioKm),
+        new Promise(r => setTimeout(r, 500))
+      ]);
+      const dados = await res.json();
+
       try {
-        var res = await fetch('/cep/buscar?cep=' + cep + '&raioKm=' + raioKm);
-        var dados = await res.json();
         if (!res.ok) {
-          el.innerHTML = '<p class="erro">Erro ' + res.status + ': ' + (dados.message || JSON.stringify(dados)) + '</p>';
+          const msg = Array.isArray(dados.message) ? dados.message.join(', ') : (dados.message || JSON.stringify(dados));
+          el.innerHTML = `
+            <div class="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl px-5 py-4 text-red-300">
+              <svg class="w-5 h-5 mt-0.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+              </svg>
+              <div>
+                <p class="font-semibold text-sm">Erro ${res.status}</p>
+                <p class="text-xs mt-0.5 text-red-400">${msg}</p>
+              </div>
+            </div>`;
           return;
         }
-        var o = dados.origem;
-        var itens = dados.resultados.map(function(c) { return '<li>' + c + '</li>'; }).join('');
-        el.innerHTML =
-          '<p><strong>Origem:</strong> ' + o.cep + ' — ' + o.logradouro + ', ' + o.bairro + ', ' + o.cidade + '/' + o.uf + '</p>' +
-          '<p><strong>Total encontrado:</strong> ' + dados.total + '</p>' +
-          (dados.total > 0 ? '<ul>' + itens + '</ul>' : '');
+
+        const o = dados.origem;
+        const badges = dados.resultados.map(c =>
+          `<span class="inline-block bg-slate-100 dark:bg-slate-700/80 hover:bg-indigo-500/20 hover:border-indigo-500/50 border border-slate-300 dark:border-slate-600/50 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-700 dark:text-slate-300 transition-colors cursor-default">${c}</span>`
+        ).join('');
+
+        el.innerHTML = `
+          <div class="bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 backdrop-blur-sm mb-3 shrink-0 transition-colors duration-300">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-emerald-500 dark:text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path fill-rule="evenodd" d="m11.54 22.351.07.04.028.016a.76.76 0 0 0 .723 0l.028-.015.071-.041a16.975 16.975 0 0 0 1.144-.742 19.58 19.58 0 0 0 2.683-2.282c1.944-2.003 3.5-4.697 3.5-8.867a8 8 0 0 0-16 0c0 4.17 1.555 6.864 3.5 8.867a19.58 19.58 0 0 0 2.682 2.282 16.975 16.975 0 0 0 1.144.742ZM12 13.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">CEP de origem</p>
+                <p class="font-mono font-bold text-slate-900 dark:text-slate-100">${o.cep}</p>
+                <p class="text-slate-500 dark:text-slate-400 text-sm mt-0.5 truncate">${o.logradouro}${o.bairro ? ', ' + o.bairro : ''} — ${o.cidade}/${o.uf}</p>
+              </div>
+              <div class="text-right shrink-0">
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mb-0.5">Encontrados</p>
+                <p class="text-2xl font-bold text-indigo-500 dark:text-indigo-400">${dados.total.toLocaleString('pt-BR')}</p>
+              </div>
+            </div>
+          </div>
+          ${dados.total > 0 ? `
+          <div class="bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 backdrop-blur-sm flex-1 overflow-hidden flex flex-col min-h-0 transition-colors duration-300">
+            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 shrink-0">CEPs no raio de ${raioKm} km</p>
+            <div class="flex flex-wrap gap-2 content-start overflow-y-auto flex-1 min-h-0 pr-1 scrollbar-custom">${badges}</div>
+          </div>` : ''}
+        `;
+        btnLimpar.classList.remove('hidden');
+        btnLimpar.classList.add('flex');
       } catch (err) {
-        el.innerHTML = '<p class="erro">Erro de conexao: ' + err.message + '</p>';
+        btnLimpar.classList.remove('flex');
+        btnLimpar.classList.add('hidden');
+        el.innerHTML = `
+          <div class="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-2xl px-5 py-4 text-red-300 text-sm">
+            Erro de conexão: ${err.message}
+          </div>`;
+      } finally {
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnTexto.textContent = 'Buscar';
       }
     });
   </script>
