@@ -140,6 +140,23 @@ A pasta `logs/` é criada automaticamente na primeira execução.
 
 ---
 
+## Interface Web
+
+Acesse [http://localhost:3000](http://localhost:3000) após iniciar o servidor.
+
+**1. Preencha o CEP de origem e o raio desejado, depois clique em Buscar:**
+
+![Tela inicial](docs/cep_dash.jpeg)
+
+**2. O resultado exibe o endereço de origem e todos os CEPs encontrados no raio, com scroll interno:**
+
+![Resultado da busca](docs/cep_result.jpeg)
+
+> O ícone de lixeira aparece ao lado do botão Buscar após um resultado — clique para limpar tudo.  
+> O ícone no canto superior direito alterna entre modo escuro e modo claro.
+
+---
+
 ## Executando os testes
 
 ```bash
