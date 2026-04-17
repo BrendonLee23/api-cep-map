@@ -2,5 +2,6 @@
 set -e
 
 npm install
+npm run build
 unzip -o data/ceps.zip -d data/
-echo "Build complete. ceps.csv ready."
+echo "Build complete."

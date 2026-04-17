@@ -7,7 +7,7 @@
     "dev": "ts-node -r tsconfig-paths/register src/main.ts",
     "start": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:dev": "nest start --watch",
-    "start:prod": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start:prod": "node --max-old-space-size=460 dist/main",
     "build:dataset": "ts-node --project tsconfig.json scripts/build-cep-dataset.ts",
     "test": "jest",
     "test:watch": "jest --watch",
